@@ -23,19 +23,18 @@ class Point:
     def move(self):
         self.xPos += self.xVel
         self.yPos += self.yVel
-        
+
 ## Contains all of the points in the system, and performs all attraction / acceleration calculations
 class Field:
 
     G = 6.67 * (10**-11)
     colour = ['#ff0000','#ffff00','#00ff00','#00ffff','#0000ff','#ffffff'] #Colours for planets!
     mStar = 10**12 #Mass of central body
-    
+
     ## Creates n random points in (x, y) range
     def __init__(self, numPoints, xScale, yScale):
         ## Create an empty array of the correct size. Stops the runtime having to move potentially very large arrays.
         self.pointArray = [None] * numPoints
-        self.colourArray = [None] * numPoints
         self.xScale = xScale
         self.yScale = yScale
         for i in range(numPoints):
@@ -43,20 +42,15 @@ class Field:
             rRand = random.random()
             aRand = random.random() * 2 * math.pi
             mRand = (random.random() * 10)**11
-            xPos = (xScale * (rRand/4 * math.cos(aRand))) + xScale/2 ##don't want to generate right to the edges
+            colour = Field.colour[random.randint(0,5)]
+            xPos = (xScale * (rRand/4 * math.cos(aRand))) + xScale/2
             yPos = (yScale * (rRand/4 * math.sin(aRand))) + yScale/2
             r = math.hypot((xPos - xScale/2), (yPos - yScale/2))
-            self.pointArray[i] = Point(xPos,
-                                       yPos,
-                                       (-(yPos - yScale/2) / r) * (Field.G * Field.mStar / r)**.5,# * ((random.random()/2 + 0.75)) * r/100,
-                                       ( (xPos - xScale/2) / r) * (Field.G * Field.mStar / r)**.5,# * ((random.random()/2 + 0.75)) * r/100,
-                                       mRand,
-                                       xScale,
-                                       yScale,
-                                       Field.colour[random.randint(0,5)])
+            xVel = (-(yPos - yScale/2) / r) * (Field.G * Field.mStar / r)**.5
+            yVel = ((xPos - xScale/2) / r) * (Field.G * Field.mStar / r)**.5
+            self.pointArray[i] = Point(xPos, yPos, xVel, yVel, mRand, xScale, yScale, colour)
         self.pointArray.append(Point(xScale / 2, yScale / 2, 0, 0, Field.mStar, xScale, yScale, 'yellow'))
-        #self.pointArray.append(Point(xScale, yScale, -1, 0, Field.mStar, xScale, yScale))
-            
+
     def update(self):
         ## Create a temp array that will be used to store the updated positions as we work on each point.
         workArray = self.pointArray[:]
@@ -73,10 +67,9 @@ class Field:
                         r = ((self.pointArray[j].mass)**(1/3))/2000 + ((self.pointArray[i].mass)**(1/3))/2000
                         pi = self.pointArray[i]
                         pj = self.pointArray[j]
-                        
+
                         if dist <= r:
-                            cMass = pi.mass + pj.mass                          
-                            #newPoint = Point
+                            cMass = pi.mass + pj.mass
                             workArray[i] = Point((pi.xPos*pi.mass + pj.xPos*pj.mass)/cMass,
                                                        (pi.yPos*pi.mass + pj.yPos*pj.mass)/cMass,
                                                        (pi.xVel*pi.mass + pj.xVel*pj.mass)/cMass,
@@ -86,7 +79,6 @@ class Field:
                                                         pi.yScale,
                                                         pi.colour)
                             workArray[j] = Point(10**10, 10**10, 0, 0, 0, 0, 0, self.pointArray[i].colour)
-                            #workArray.append(newPoint)
                             self.pointArray[j].Exists = False
                             workArray[j].Exists = False
                         else:
@@ -98,6 +90,7 @@ class Field:
                 workArray[i].move()
         ## Make a deep copy of the temp array to the instance array so that it can be used for drawing and future iteration.
         self.pointArray = workArray[:]
+
     def calcDist(x1, y1, x2, y2):
         ## calculate the absolute differences of the points
         ## and then the distance between them using a^2 + b^2 = c^2
@@ -106,7 +99,7 @@ class Field:
     def calcForce(m1, m2, r):
     ##def calcForce(m1, m2, r, g = 0.0001):
         ## calculate the force betweem points using Newtonion Gravitation, returns 0 in case of errors such as divide by 0.
-        try: 
+        try:
             temp = Field.G * ((m1 * m2)/(r**2))
         except:
             temp = 0
@@ -121,10 +114,10 @@ class Field:
         except:
             temp = 0
         return temp
-            
+
 class Draw():
 
-    
+
     ## Create the window and field.
     def __init__(self, master):
         self.width = 600
@@ -137,15 +130,13 @@ class Draw():
     def drawFrame(self):
         for j in range(len(self.field.pointArray)):
             if self.field.pointArray[j].Exists:
+                ## Calculate the drawn radius of each point
                 r = ((self.field.pointArray[j].mass)**(1/3))/2000
                 x = self.field.pointArray[j].xPos
                 y = self.field.pointArray[j].yPos
-                self.canvas.create_oval(x-r,
-                                        y-r,
-                                        x+r,
-                                        y+r,
-                                        fill = self.field.pointArray[j].colour,
-                                        outline = self.field.pointArray[j].colour)
+                colour = self.field.pointArray[j].colour
+                ## Draw each oval centered on the point co-ords.
+                self.canvas.create_oval(x-r, y-r, x+r, y+r, fill = colour, outline = colour)
                 self.canvas.create_text(self.width/2, 10, fill='white', text=progress)
         ## Update the canvas, otherwise nothing will be visible because the TK will wait until the program is out of a function to update the GUI by default.
         self.field.update()
