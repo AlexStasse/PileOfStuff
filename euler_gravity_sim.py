@@ -16,7 +16,6 @@ class Point:
         self.colour = colour
         self.xScale = xScale
         self.yScale = yScale
-        self.Exists = True
 
     ## Applies the velocity of the point to the points position to simulate movement.
     ## Could be moved into Field to unify the functions.
@@ -37,7 +36,7 @@ class Field:
         self.pointArray = [None] * numPoints
         self.xScale = xScale
         self.yScale = yScale
-        for i in range(numPoints):
+        for i in range(len(self.pointArray)):
             ## Set the array to have a collection of random points scatered in the center of the window.
             rRand = random.random()
             aRand = random.random() * 2 * math.pi
@@ -56,9 +55,9 @@ class Field:
         workArray = self.pointArray[:]
         ## Loop over every point
         for i in range(len(self.pointArray)):
-            if self.pointArray[i].Exists:
+            if self.pointArray[i] != None:
                 for j in range(len(self.pointArray)):
-                    if i == j or not self.pointArray[j].Exists:
+                    if i == j or self.pointArray[j] == None:
                         pass
                     else:
                         ## Calculate the distance between two points, how much force there is between them, and then the
@@ -71,16 +70,15 @@ class Field:
                         if dist <= r:
                             cMass = pi.mass + pj.mass
                             workArray[i] = Point((pi.xPos*pi.mass + pj.xPos*pj.mass)/cMass,
-                                                       (pi.yPos*pi.mass + pj.yPos*pj.mass)/cMass,
-                                                       (pi.xVel*pi.mass + pj.xVel*pj.mass)/cMass,
-                                                       (pi.yVel*pi.mass + pj.yVel*pj.mass)/cMass,
-                                                        cMass,
-                                                        pi.xScale,
-                                                        pi.yScale,
-                                                        pi.colour)
-                            workArray[j] = Point(10**10, 10**10, 0, 0, 0, 0, 0, self.pointArray[i].colour)
-                            self.pointArray[j].Exists = False
-                            workArray[j].Exists = False
+                                                 (pi.yPos*pi.mass + pj.yPos*pj.mass)/cMass,
+                                                 (pi.xVel*pi.mass + pj.xVel*pj.mass)/cMass,
+                                                 (pi.yVel*pi.mass + pj.yVel*pj.mass)/cMass,
+                                                 cMass,
+                                                 pi.xScale,
+                                                 pi.yScale,
+                                                 pi.colour)
+                            workArray[j] = None
+                            self.pointArray[j] = None
                         else:
                             ## Calculate values against every other point, but not for a point against itself.
                             force = Field.calcForce(self.pointArray[i].mass, self.pointArray[j].mass, dist)
@@ -89,7 +87,7 @@ class Field:
                 ## Move the point once all of the forces have been applied to it.
                 workArray[i].move()
         ## Make a deep copy of the temp array to the instance array so that it can be used for drawing and future iteration.
-        self.pointArray = workArray[:]
+        self.pointArray = [x for x in workArray if x != None]
 
     def calcDist(x1, y1, x2, y2):
         ## calculate the absolute differences of the points
@@ -128,16 +126,14 @@ class Draw():
 
     ## For every point in the field, draw a circle at its co-ordinates.
     def drawFrame(self):
-        for j in range(len(self.field.pointArray)):
-            if self.field.pointArray[j].Exists:
-                ## Calculate the drawn radius of each point
-                r = ((self.field.pointArray[j].mass)**(1/3))/2000
-                x = self.field.pointArray[j].xPos
-                y = self.field.pointArray[j].yPos
-                colour = self.field.pointArray[j].colour
-                ## Draw each oval centered on the point co-ords.
-                self.canvas.create_oval(x-r, y-r, x+r, y+r, fill = colour, outline = colour)
-                self.canvas.create_text(self.width/2, 10, fill='white', text=progress)
+        ## Calculate the drawn radius of each point
+        r = ((self.field.pointArray[j].mass)**(1/3))/2000
+        x = self.field.pointArray[j].xPos
+        y = self.field.pointArray[j].yPos
+        colour = self.field.pointArray[j].colour
+        ## Draw each oval centered on the point co-ords.
+        self.canvas.create_oval(x-r, y-r, x+r, y+r, fill = colour, outline = colour)
+        self.canvas.create_text(self.width/2, 10, fill='white', text=progress)
         ## Update the canvas, otherwise nothing will be visible because the TK will wait until the program is out of a function to update the GUI by default.
         self.field.update()
 
