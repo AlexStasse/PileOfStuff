@@ -21,8 +21,6 @@ class Point:
     def move(self):
         self.xPos += self.xVel
         self.yPos += self.yVel
-        self.xPos = self.xPos #% self.xScale
-        self.yPos = self.yPos #% self.yScale
         
 ## Contains all of the points in the system, and performs all attraction / acceleration calculations
 class Field:
