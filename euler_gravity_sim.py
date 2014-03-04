@@ -28,7 +28,7 @@ class Point:
 class Field:
 
     G = 6.67 * (10**-11)
-    colour = ['white','red','blue','green','yellow'] #Colours for planets!
+    colour = ['#ff0000','#ffff00','#00ff00','#0000ff','#ffffff'] #Colours for planets!
     mStar = 10**13 #Mass of central body
     
     ## Creates n random points in (x, y) range
@@ -105,19 +105,19 @@ class Draw():
     
     ## Create the window and field.
     def __init__(self, master):
-        self.width = 800
-        self.height = 800
-        self.field = Field(30, self.width, self.height)
+        self.width = 600
+        self.height = 600
+        self.field = Field(50, self.width, self.height)
         self.canvas = tk.Canvas(master, width = self.width, height = self.height, background = 'black')
         self.canvas.pack()
 
     ## For every point in the field, draw a circle at its co-ordinates.
     def drawFrame(self):
         for j in range(len(self.field.pointArray)):
-            self.canvas.create_oval(self.field.pointArray[j].xPos-math.log(self.field.pointArray[j].mass)/10,
-                                         self.field.pointArray[j].yPos-math.log(self.field.pointArray[j].mass)/10,
-                                         self.field.pointArray[j].xPos+math.log(self.field.pointArray[j].mass)/10,
-                                         self.field.pointArray[j].yPos+math.log(self.field.pointArray[j].mass)/10,
+            self.canvas.create_oval(self.field.pointArray[j].xPos-((self.field.pointArray[j].mass)**(1/3))/2000,
+                                         self.field.pointArray[j].yPos-((self.field.pointArray[j].mass)**(1/3))/2000,
+                                         self.field.pointArray[j].xPos+((self.field.pointArray[j].mass)**(1/3))/2000,
+                                         self.field.pointArray[j].yPos+((self.field.pointArray[j].mass)**(1/3))/2000,
                                          fill = self.field.colourArray[j],
                                          outline = 'white')
         ## Update the canvas, otherwise nothing will be visible because the TK will wait until the program is out of a function to update the GUI by default.
@@ -130,5 +130,5 @@ while True:
         d.canvas.delete('all')
         d.drawFrame()
         d.canvas.update()
-        time.sleep(1/30)
+        time.sleep(1/60)
     d.canvas.destroy()
