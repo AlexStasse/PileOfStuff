@@ -38,16 +38,16 @@ class Field:
         self.colourArray = [None] * numPoints
         for i in range(numPoints):
             ## Set the array to have a collection of random points scatered in the center of the window.
-            xRand = random.random()
-            yRand = random.random()
+            rRand = random.random()
+            aRand = random.random() * 2 * math.pi
             mRand = (random.random() * 10)**11
-            xPos = (xScale * xRand / 2) + (xScale / 4) ##don't want to generate right to the edges
-            yPos = (yScale * yRand / 2) + (yScale / 4)
+            xPos = (xScale * (rRand/4 * math.cos(aRand))) + xScale/2 ##don't want to generate right to the edges
+            yPos = (yScale * (rRand/4 * math.sin(aRand))) + yScale/2
             r = math.hypot((xPos - xScale/2), (yPos - yScale/2))
             self.pointArray[i] = Point(xPos,
                                        yPos,
-                                       (-(yPos - yScale/2)/r) * (Field.G * Field.mStar / r)**.5 * (random.random() + 0.5),
-                                       ((xPos - xScale/2)/r) *(Field.G * Field.mStar / r)**.5 * (random.random() + 0.5),
+                                       (-(yPos - yScale/2)/r) * (Field.G * Field.mStar / r)**.5 * ((random.random()/2 + 0.75)),
+                                       ( (xPos - xScale/2)/r) * (Field.G * Field.mStar / r)**.5 * ((random.random()/2 + 0.75)),
                                        mRand,
                                        xScale,
                                        yScale,)
@@ -58,7 +58,7 @@ class Field:
     def update(self):
         ## Create a temp array that will be used to store the updated positions as we work on each point.
         workArray = self.pointArray[:]
-        ## Loop over eivery point
+        ## Loop over every point
         for i in range(len(self.pointArray)):
             ## Calculate values against every other point, but not for a point against itself.
             for j in range(len(self.pointArray)):
@@ -107,7 +107,7 @@ class Draw():
     def __init__(self, master):
         self.width = 600
         self.height = 600
-        self.field = Field(50, self.width, self.height)
+        self.field = Field(80, self.width, self.height)
         self.canvas = tk.Canvas(master, width = self.width, height = self.height, background = 'black')
         self.canvas.pack()
 
@@ -120,6 +120,7 @@ class Draw():
                                          self.field.pointArray[j].yPos+((self.field.pointArray[j].mass)**(1/3))/2000,
                                          fill = self.field.colourArray[j],
                                          outline = 'white')
+            self.canvas.create_text(self.width/2, 10, fill='white', text=progress)
         ## Update the canvas, otherwise nothing will be visible because the TK will wait until the program is out of a function to update the GUI by default.
         self.field.update()
 
@@ -127,6 +128,7 @@ root = tk.Tk()
 while True:
     d = Draw(root)
     for i in range(10000):
+        progress = ('frame', i, 'of 10000');
         d.canvas.delete('all')
         d.drawFrame()
         d.canvas.update()
