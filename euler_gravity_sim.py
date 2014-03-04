@@ -23,8 +23,8 @@ class Point:
     def move(self):
         self.xPos += self.xVel
         self.yPos += self.yVel
-        self.xPos = self.xPos % self.xScale
-        self.yPos = self.yPos % self.yScale
+        self.xPos = self.xPos #% self.xScale
+        self.yPos = self.yPos #% self.yScale
         
 ## Contains all of the points in the system, and performs all attraction / acceleration calculations
 class Field:
@@ -39,13 +39,13 @@ class Field:
             yRand = random.random()
             mRand = (random.random() * 10)**11
             mStar = 10**13
-            xPos = (xScale * xRand / 2) + (xScale / 4)
+            xPos = (xScale * xRand / 2) + (xScale / 4) ##don't want to generate right to the edges
             yPos = (yScale * yRand / 2) + (yScale / 4)
             r = math.hypot((xPos - xScale/2), (yPos - yScale/2))
             self.pointArray[i] = Point(xPos,
                                        yPos,
-                                       (-(yPos - yScale/2)/r) * (G * mStar / r)**.5,
-                                       ((xPos - xScale/2)/r) *(G * mStar / r)**.5,
+                                       (-(yPos - yScale/2)/r) * (G * mStar / r)**.5 * (random.random() + 0.5),
+                                       ((xPos - xScale/2)/r) *(G * mStar / r)**.5 * (random.random() + 0.5),
                                        mRand,
                                        xScale,
                                        yScale)
@@ -75,7 +75,7 @@ class Field:
     def calcDist(x1, y1, x2, y2):
         ## calculate the absolute differences of the points
         ## and then the distance between them using a^2 + b^2 = c^2
-        return ((abs(x1 - x2)**2) + (abs(y1 - y2)**2))**0.5
+        return math.hypot(abs(x1 - x2), abs(y1 - y2))
 
     def calcForce(m1, m2, r):
     ##def calcForce(m1, m2, r, g = 0.0001):
@@ -108,10 +108,10 @@ class Draw():
     ## For every point in the field, draw a circle at its co-ordinates.
     def drawFrame(self):
         for j in range(len(self.field.pointArray)):
-            self.canvas.create_oval(self.field.pointArray[j].xPos,
-                                         self.field.pointArray[j].yPos,
-                                         self.field.pointArray[j].xPos+math.log(self.field.pointArray[j].mass)/5,
-                                         self.field.pointArray[j].yPos+math.log(self.field.pointArray[j].mass)/5)
+            self.canvas.create_oval(self.field.pointArray[j].xPos-math.log(self.field.pointArray[j].mass)/10,
+                                         self.field.pointArray[j].yPos-math.log(self.field.pointArray[j].mass)/10,
+                                         self.field.pointArray[j].xPos+math.log(self.field.pointArray[j].mass)/10,
+                                         self.field.pointArray[j].yPos+math.log(self.field.pointArray[j].mass)/10)
         ## Update the canvas, otherwise nothing will be visible because the TK will wait until the program is out of a function to update the GUI by default.
         self.field.update()
 
