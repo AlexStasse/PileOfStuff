@@ -7,12 +7,13 @@ import math
 
 ## Holds the mass, positition and velocity data of every body.
 class Point:
-    def __init__(self, xPos, yPos, xVel, yVel, mass, xScale, yScale):
+    def __init__(self, xPos, yPos, xVel, yVel, mass, xScale, yScale, colour):
         self.xPos = xPos
         self.yPos = yPos
         self.xVel = xVel
         self.yVel = yVel
         self.mass = mass
+        self.colour = colour
         self.xScale = xScale
         self.yScale = yScale
         self.Exists = True
@@ -51,12 +52,10 @@ class Field:
                                        ( (xPos - xScale/2) / r) * (Field.G * Field.mStar / r)**.5,# * ((random.random()/2 + 0.75)) * r/100,
                                        mRand,
                                        xScale,
-                                       yScale,)
-            self.colourArray[i] = Field.colour[random.randint(0,5)]
-        self.pointArray.append(Point(xScale / 2, yScale / 2, 0, 0, Field.mStar, xScale, yScale))
+                                       yScale,
+                                       Field.colour[random.randint(0,5)])
+        self.pointArray.append(Point(xScale / 2, yScale / 2, 0, 0, Field.mStar, xScale, yScale, 'yellow'))
         #self.pointArray.append(Point(xScale, yScale, -1, 0, Field.mStar, xScale, yScale))
-        self.colourArray.append('yellow')
-        #self.colourArray.append('yellow')
             
     def update(self):
         ## Create a temp array that will be used to store the updated positions as we work on each point.
@@ -84,8 +83,9 @@ class Field:
                                                        (pi.yVel*pi.mass + pj.yVel*pj.mass)/cMass,
                                                         cMass,
                                                         pi.xScale,
-                                                        pi.yScale)
-                            workArray[j] = Point(10**10, 10**10, 0, 0, 0, 0, 0)
+                                                        pi.yScale,
+                                                        pi.colour)
+                            workArray[j] = Point(10**10, 10**10, 0, 0, 0, 0, 0, self.pointArray[i].colour)
                             #workArray.append(newPoint)
                             self.pointArray[j].Exists = False
                             workArray[j].Exists = False
@@ -144,8 +144,8 @@ class Draw():
                                         y-r,
                                         x+r,
                                         y+r,
-                                        fill = self.field.colourArray[j],
-                                        outline = 'white')
+                                        fill = self.field.pointArray[j].colour,
+                                        outline = self.field.pointArray[j].colour)
                 self.canvas.create_text(self.width/2, 10, fill='white', text=progress)
         ## Update the canvas, otherwise nothing will be visible because the TK will wait until the program is out of a function to update the GUI by default.
         self.field.update()
