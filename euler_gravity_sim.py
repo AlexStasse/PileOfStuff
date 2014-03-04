@@ -25,7 +25,6 @@ class Point:
 
 ## Contains all of the points in the system, and performs all attraction / acceleration calculations
 class Field:
-
     G = 6.67 * (10**-11)
     colour = ['#ff0000','#ffff00','#00ff00','#00ffff','#0000ff','#ffffff'] #Colours for planets!
     mStar = 10**12 #Mass of central body
@@ -114,36 +113,58 @@ class Field:
         return temp
 
 class Draw():
-
-
     ## Create the window and field.
-    def __init__(self, master):
+    def __init__(self, master, numPoints):
         self.width = 600
         self.height = 600
-        self.field = Field(200, self.width, self.height)
+        self.progress = None
+        self.field = Field(numPoints, self.width, self.height)
         self.canvas = tk.Canvas(master, width = self.width, height = self.height, background = 'black')
         self.canvas.pack()
 
     ## For every point in the field, draw a circle at its co-ordinates.
     def drawFrame(self):
-        ## Calculate the drawn radius of each point
-        r = ((self.field.pointArray[j].mass)**(1/3))/2000
-        x = self.field.pointArray[j].xPos
-        y = self.field.pointArray[j].yPos
-        colour = self.field.pointArray[j].colour
-        ## Draw each oval centered on the point co-ords.
-        self.canvas.create_oval(x-r, y-r, x+r, y+r, fill = colour, outline = colour)
-        self.canvas.create_text(self.width/2, 10, fill='white', text=progress)
-        ## Update the canvas, otherwise nothing will be visible because the TK will wait until the program is out of a function to update the GUI by default.
+        for i in range(len(self.field.pointArray)):
+            ## Calculate the drawn radius of each point
+            r = ((self.field.pointArray[i].mass)**(1/3))/2000
+            x = self.field.pointArray[i].xPos
+            y = self.field.pointArray[i].yPos
+            colour = self.field.pointArray[i].colour
+            ## Draw each oval centered on the point co-ords.
+            self.canvas.create_oval(x-r, y-r, x+r, y+r, fill = colour, outline = colour)
+            self.canvas.create_text(self.width/2, 10, fill='white', text=self.progress)
+            self.canvas.create_text(self.width/2, 25, fill='white', text='Press \'r\' to reset')
+            ## Update the canvas, otherwise nothing will be visible because the TK will wait until the program is out of a function to update the GUI by default.
         self.field.update()
 
-root = tk.Tk()
-while True:
-    d = Draw(root)
-    for i in range(10000):
-        progress = ('frame', i, 'of 10000');
-        d.canvas.delete('all')
-        d.drawFrame()
-        d.canvas.update()
-        time.sleep(1/60)
-    d.canvas.destroy()
+class Application():
+    def __init__(self):
+        self.root = tk.Tk()
+        self.d = Draw(self.root, 100)
+        self.i = 1
+        self.root.bind('<Key>', self.reset)
+        self.root.after(1, self.runSim)
+        self.root.mainloop()
+
+    ## Run the simulation. Used in call-backs from tkinter.
+    def runSim(self):
+        while True:
+            self.d.progress = ('frame ' + str(self.i));
+            self.i += 1
+            self.d.canvas.delete('all')
+            self.d.drawFrame()
+            self.d.canvas.update()
+            time.sleep(1/60)
+        self.d.canvas.destroy()
+
+    ## Used to reset the simulation (new simulation).
+    def reset(self, event):
+        char = repr(event.char)
+        print(char)
+        if 'r' in char:
+            print('Reset!')
+            self.d.canvas.destroy()
+            self.i = 1
+            self.d = Draw(self.root, 100)
+
+a = Application()
