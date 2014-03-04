@@ -5,8 +5,6 @@ import time
 import tkinter as tk
 import math
 
-G = 6.67 * (10**-11)
-
 ## Holds the mass, positition and velocity data of every body.
 class Point:
     def __init__(self, xPos, yPos, xVel, yVel, mass, xScale, yScale):
@@ -28,28 +26,34 @@ class Point:
         
 ## Contains all of the points in the system, and performs all attraction / acceleration calculations
 class Field:
+
+    G = 6.67 * (10**-11)
+    colour = ['white','red','blue','green','yellow'] #Colours for planets!
+    mStar = 10**13 #Mass of central body
     
     ## Creates n random points in (x, y) range
     def __init__(self, numPoints, xScale, yScale):
         ## Create an empty array of the correct size. Stops the runtime having to move potentially very large arrays.
         self.pointArray = [None] * numPoints
+        self.colourArray = [None] * numPoints
         for i in range(numPoints):
             ## Set the array to have a collection of random points scatered in the center of the window.
             xRand = random.random()
             yRand = random.random()
             mRand = (random.random() * 10)**11
-            mStar = 10**13
             xPos = (xScale * xRand / 2) + (xScale / 4) ##don't want to generate right to the edges
             yPos = (yScale * yRand / 2) + (yScale / 4)
             r = math.hypot((xPos - xScale/2), (yPos - yScale/2))
             self.pointArray[i] = Point(xPos,
                                        yPos,
-                                       (-(yPos - yScale/2)/r) * (G * mStar / r)**.5 * (random.random() + 0.5),
-                                       ((xPos - xScale/2)/r) *(G * mStar / r)**.5 * (random.random() + 0.5),
+                                       (-(yPos - yScale/2)/r) * (Field.G * Field.mStar / r)**.5 * (random.random() + 0.5),
+                                       ((xPos - xScale/2)/r) *(Field.G * Field.mStar / r)**.5 * (random.random() + 0.5),
                                        mRand,
                                        xScale,
-                                       yScale)
-        self.pointArray.append(Point(xScale / 2, yScale / 2, 0, 0, mStar, xScale, yScale))
+                                       yScale,)
+            self.colourArray[i] = Field.colour[random.randint(0,4)]
+        self.pointArray.append(Point(xScale / 2, yScale / 2, 0, 0, Field.mStar, xScale, yScale))
+        self.colourArray.append('yellow')
             
     def update(self):
         ## Create a temp array that will be used to store the updated positions as we work on each point.
@@ -81,7 +85,7 @@ class Field:
     ##def calcForce(m1, m2, r, g = 0.0001):
         ## calculate the force betweem points using Newtonion Gravitation, returns 0 in case of errors such as divide by 0.
         try: 
-            temp = G * ((m1 * m2)/(r**2))
+            temp = Field.G * ((m1 * m2)/(r**2))
         except:
             temp = 0
         return temp
@@ -97,12 +101,14 @@ class Field:
         return temp
             
 class Draw():
+
+    
     ## Create the window and field.
     def __init__(self, master):
         self.width = 800
         self.height = 800
         self.field = Field(30, self.width, self.height)
-        self.canvas = tk.Canvas(master, width = self.width, height = self.height)
+        self.canvas = tk.Canvas(master, width = self.width, height = self.height, background = 'black')
         self.canvas.pack()
 
     ## For every point in the field, draw a circle at its co-ordinates.
@@ -111,7 +117,9 @@ class Draw():
             self.canvas.create_oval(self.field.pointArray[j].xPos-math.log(self.field.pointArray[j].mass)/10,
                                          self.field.pointArray[j].yPos-math.log(self.field.pointArray[j].mass)/10,
                                          self.field.pointArray[j].xPos+math.log(self.field.pointArray[j].mass)/10,
-                                         self.field.pointArray[j].yPos+math.log(self.field.pointArray[j].mass)/10)
+                                         self.field.pointArray[j].yPos+math.log(self.field.pointArray[j].mass)/10,
+                                         fill = self.field.colourArray[j],
+                                         outline = 'white')
         ## Update the canvas, otherwise nothing will be visible because the TK will wait until the program is out of a function to update the GUI by default.
         self.field.update()
 
