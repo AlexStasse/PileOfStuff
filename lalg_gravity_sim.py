@@ -43,12 +43,17 @@ class Field:
 
     ## Integrator, still euler with the loop in the python. Now with added overhead!
     def update(self):
+        disp = matrix([0,0])
+        G = Field.G
+        norm = numpy.linalg.norm
         for body in self.bodArr:
             body.tempForce = matrix([0.,0.])
+            GM = G * body.mass
             for other in self.bodArr:
                 if not (body == other):
+                    disp = body.X - other.X
                     ## GMm/r**2 for each other body
-                    body.tempForce += (Field.G * body.mass * other.mass) * (numpy.linalg.norm(body.X - other.X)**-2 * -(body.X - other.X))
+                    body.tempForce += (-GM * other.mass) * (norm(disp)**-2) * (disp)
         for body in self.bodArr:
             ## dV/dt = F/m
             body.V += body.tempForce / body.mass
