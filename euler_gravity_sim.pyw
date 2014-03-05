@@ -37,17 +37,31 @@ class Field:
         self.yScale = yScale
         for i in range(len(self.pointArray)):
             ## Set the array to have a collection of random points scatered in the center of the window.
-            rRand = random.random()
-            aRand = random.random() * 2 * math.pi
-            mRand = (random.random() * 10)**11
+            pos = self.calcPolarCoord(xScale, yScale, 1/4)  ##position of the point
+            mRand = (random.random() * 10)**11              ##mass of the point
             colour = Field.colour[random.randint(0,5)]
-            xPos = (xScale * (rRand/4 * math.cos(aRand))) + xScale/2
-            yPos = (yScale * (rRand/4 * math.sin(aRand))) + yScale/2
-            r = math.hypot((xPos - xScale/2), (yPos - yScale/2))
-            xVel = (-(yPos - yScale/2) / r) * (Field.G * Field.mStar / r)**.5
-            yVel = ((xPos - xScale/2) / r) * (Field.G * Field.mStar / r)**.5
-            self.pointArray[i] = Point(xPos, yPos, xVel, yVel, mRand, xScale, yScale, colour)
+            vel = self.calcInitVel(pos[0], pos[1], xScale, yScale, Field.G, Field.mStar, pos[2])
+            self.pointArray[i] = Point(pos[0], pos[1], vel[0], vel[1], mRand, xScale, yScale, colour)
         self.pointArray.append(Point(xScale / 2, yScale / 2, 0, 0, Field.mStar, xScale, yScale, 'yellow'))
+
+    def calcPolarCoord(self, xScale, yScale, rScale):
+        ##calculate a radius and angle then return cartesian coordinates, offset to centre of canvas
+        ##the radius is modified by rScale to cover various amounts of canvas.
+        rRand = random.random() * rScale
+        aRand = random.random() * 2 * math.pi
+        xPos = (xScale * (rRand * math.cos(aRand))) + xScale/2
+        yPos = (yScale * (rRand * math.sin(aRand))) + yScale/2
+        ##Calculates the radius from the center of the canvas
+        r = math.hypot((xPos - xScale/2), (yPos - yScale/2))
+        return [xPos, yPos, r]
+
+    def calcInitVel(self, xPos, yPos, xScale, yScale, G, mStar, r):
+        ## Calculate initial velocities for circular orbits at the current point position.
+        ## Assumes mass of point is smaller than the mass of the central star (mStar).
+        xVel = (-(yPos - yScale/2) / r) * (G * mStar / r)**.5
+        yVel = ((xPos - xScale/2) / r) * (G * mStar / r)**.5
+        return [xVel, yVel]
+        
 
     def update(self):
         ## Create a temp array that will be used to store the updated positions as we work on each point.

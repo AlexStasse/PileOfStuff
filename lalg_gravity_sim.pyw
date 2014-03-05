@@ -48,6 +48,7 @@ class Field:
         self.bodArr[0].X = matrix([0.,0.])
         self.bodArr[0].V = matrix([0.,0.])
         self.bodArr[0].mass = float(1E12)
+        self.bodArr[0].r = self.bodArr[0].mass**(1/3) / 2000
 
     ## Integrator, still euler with the loop in the python. Now with added overhead!
     def update(self):
