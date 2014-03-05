@@ -129,8 +129,9 @@ class Draw():
         self.canvas.configure(xscrollincrement='1', yscrollincrement='1')
         self.canvas.xview_scroll(int(-w/2), "units")
         self.canvas.yview_scroll(int(-h/2), "units")
-        self.canvas.pack()
+        self.canvas.pack(expand=True, fill=tk.BOTH)
         self.field = Field(60, self.canvas)
+        
     def drawFrame(self):
         self.field.update()
         for body in self.field.bodArr:
@@ -138,6 +139,14 @@ class Draw():
                 body.redraw()
         self.canvas.update()
         time.sleep(1/60)
+
+    def update(self, width, height):
+        print('asd')
+        self.width = width
+        self.height = height
+        self.canvas.xview_scroll(int(-self.width/2), "units")
+        self.canvas.yview_scroll(int(-self.height/2), "units")
+        self.canvas.pack()
 
 ##def mainLoop():
 ##    root = tk.Tk()
@@ -157,7 +166,10 @@ class Application():
         self.root = tk.Tk()
         self.d = Draw(self.root)
         self.i = 1
+        self.width = self.root.winfo_width()
+        self.height = self.root.winfo_height()
         self.root.bind('<Key>', self.reset)
+        ##self.root.bind('<Configure>', self.resize)
         self.root.after(1, self.runSim)
         self.root.mainloop()
 
@@ -171,5 +183,8 @@ class Application():
         if 'r' in repr(event.char):
             self.d.canvas.destroy()
             self.d = Draw(self.root)
+
+    def resize(self, event):
+        self.d.update(event.width, event.height)
 
 a = Application()
