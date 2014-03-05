@@ -15,22 +15,29 @@ from random import random
 ## Celestial body with numpy matrices position X, velocity V, and mass m.
 class Body:
     def __init__(self, X, V, m, canvas):
+        self.Exists = True
         self.X = X
         self.V = V
         self.tempForce = array([0.,0.])
         self.mass = m
         self.canvas = canvas
-        self.r = m**(1/3) / 2000
-        self.color =  colorsys.hls_to_rgb(255 * m, 128, 1)
-        #Convert RGB to hex
-        self.hex = '#%02x%02x%02x' % self.color
+        self.updateRadius()
+        self.updateColour()
         ## Let the point take care of its oval, that way we can update positions rather than
         ## Recreate them all. NB: Tk is terrible for this type of thing.
-        self.oval = canvas.create_oval(self.X[0] - self.r, self.X[1] - self.r,
-                                       self.X[0] + self.r, self.X[1] + self.r,
+        self.oval = canvas.create_oval(X[0] - self.r, X[1] - self.r,
+                                       X[0] + self.r, X[1] + self.r,
                                        fill = self.hex,
-                                       outline = 'white')
+                                       outline = self.hex)
 
+    def updateRadius(self):
+        self.r = self.mass**(1/3) / 2000
+
+    def updateColour(self):
+        self.color =  colorsys.hls_to_rgb(255 * self.mass, 128, 1)
+        #Convert RGB to hex
+        self.hex = '#%02x%02x%02x' % self.color
+        
     ## Redraw circle at coords self.X with radius self.r
     def redraw(self):
         self.canvas.coords(self.oval,self.X[0] - self.r, self.X[1] - self.r,
@@ -66,21 +73,36 @@ class Field:
         norm = numpy.linalg.norm
         disp = array([0.,0.])
         for body in self.bodArr:
-            body.tempForce = array([0.,0.])
-            GM = G * body.mass              #Hoist G*M1 calculation.
-            for other in self.bodArr:
-                if not (body == other):
-                    ## Find displacement without creating new array.
-                    numpy.subtract(body.X, other.X, disp)
-                    ## Multiply GMm/r**2 by disp vector / r then add in place to tempForce.
-                    numpy.add(body.tempForce,
-                              numpy.multiply((-GM * other.mass) / (max(norm(disp),0.1)**3), (disp),disp),
-                              body.tempForce)
+            if body.Exists == True:
+                body.tempForce = array([0.,0.])
+                GM = G * body.mass              #Hoist G*M1 calculation.
+                for other in self.bodArr:
+                    if other.Exists == False:
+                        pass
+                    elif not (body == other):
+                        ## Find displacement without creating new array.
+                        numpy.subtract(body.X, other.X, disp)
+                        dist = norm(disp)
+                        if dist <= body.r:
+                            cMass = body.mass + other.mass
+                            body.X = ((body.X * body.mass) + (other.X * other.mass)) / cMass
+                            body.V = ((body.V * body.mass) + (other.V * other.mass)) / cMass
+                            body.mass = cMass
+                            other.Exists = False
+                            other.canvas.delete(other.oval)
+                            body.updateRadius()
+                            body.updateColour()
+                        else:
+                            ## Multiply GMm/r**2 by disp vector / r then add in place to tempForce.
+                            numpy.add(body.tempForce,
+                                      numpy.multiply((-GM * other.mass) / (max(norm(disp),0.1)**3), (disp),disp),
+                                      body.tempForce)
         for body in self.bodArr:
-            ## dV/dt = F/m
-            body.V += body.tempForce / body.mass
-            ## dX/dt = V
-            body.X += body.V
+            if body.Exists == True:
+                ## dV/dt = F/m
+                body.V += body.tempForce / body.mass
+                ## dX/dt = V
+                body.X += body.V
             
     ## Return numpy array containing cartesian coordinates x (out[0]) and y (out[1]) corresponding to radius r and angle a.
     ## Supposed to have an optional out parameter so array can be edited in place.
@@ -108,17 +130,18 @@ class Draw():
         self.canvas.xview_scroll(int(-w/2), "units")
         self.canvas.yview_scroll(int(-h/2), "units")
         self.canvas.pack()
-        self.field = Field(30, self.canvas)
+        self.field = Field(60, self.canvas)
     def drawFrame(self):
         self.field.update()
         for body in self.field.bodArr:
-            body.redraw()
+            if body.Exists == True:
+                body.redraw()
         self.canvas.update()
         time.sleep(1/60)
 def mainLoop():
     root = tk.Tk()
     d = Draw(root)
-    i = 500
+    i = 5000
     while i > 0:
         i -= 1
         d.drawFrame()
