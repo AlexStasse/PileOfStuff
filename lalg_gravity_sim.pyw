@@ -39,8 +39,8 @@ class Field:
             x = r * math.cos(a)
             y = r * math.sin(a)
             m = (random()*10)**11
-            xv = -y/r * (Field.G*(1E12+m)/r)**.5 * (2 * math.pi) #this shouldn't need a factor
-            yv =  x/r * (Field.G*(1E12+m)/r)**.5 * (2 * math.pi)
+            xv = -y/r * (Field.G*(1E12+m)/r)**.5
+            yv =  x/r * (Field.G*(1E12+m)/r)**.5
             self.bodArr[i] = Body(matrix([x,y]),matrix([xv,yv]),m, canvas)
         ## Don't forget to make EVERYTHING a float, or you're going to have a bad time.
 
@@ -57,7 +57,7 @@ class Field:
             for other in self.bodArr:
                 if not (body == other):
                     ## GMm/r**2 for each other body
-                    body.tempForce += (Field.G * body.mass * other.mass) * (numpy.linalg.norm(body.X - other.X)**-2 * -(body.X - other.X))
+                    body.tempForce += (Field.G * body.mass * other.mass) * (numpy.linalg.norm(body.X - other.X)**-3 * -(body.X - other.X))
         for body in self.bodArr:
             ## dV/dt = F/m
             body.V += body.tempForce / body.mass
