@@ -51,9 +51,9 @@ class Field:
             GM = G * body.mass
             for other in self.bodArr:
                 if not (body == other):
-                    disp = body.X - other.X
+                    disp = body.X - other.X # Still creates an array?
                     ## GMm/r**2 for each other body
-                    body.tempForce += (-GM * other.mass) * (norm(disp)**-2) * (disp)
+                    body.tempForce += (-GM * other.mass) / (norm(disp)**2) * (disp)
         for body in self.bodArr:
             ## dV/dt = F/m
             body.V += body.tempForce / body.mass
@@ -71,7 +71,7 @@ class Draw():
         self.canvas.xview_scroll(w*2, "units")
         self.canvas.yview_scroll(h*2, "units")
         self.canvas.pack()
-        self.field = Field(20, self.canvas)
+        self.field = Field(50, self.canvas)
     def drawFrame(self):
         self.field.update()
         for body in self.field.bodArr:
