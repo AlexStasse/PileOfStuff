@@ -15,7 +15,7 @@ class Body:
         self.tempForce = matrix([0.,0.])
         self.mass = m
         self.canvas = canvas
-        self.r = m**(1/3) / 200
+        self.r = m**(1/3) / 2000
         ## Let the point take care of its oval, that way we can update positions rather than
         ## Recreate them all. NB: Tk is terrible for this type of thing.
         self.oval = canvas.create_oval(self.X.A1[0] - self.r, self.X.A1[1] - self.r,
@@ -38,9 +38,9 @@ class Field:
             a = random() * 2 * math.pi
             x = r * math.cos(a)
             y = r * math.sin(a)
-            m = random()*1E8
-            xv = -y/r * (Field.G*(1E12+m)/r)**.5 * 6 #this shouldn't need to be multiplied by 5, something wacky is going on
-            yv =  x/r * (Field.G*(1E12+m)/r)**.5 * 6
+            m = (random()*10)**11
+            xv = -y/r * (Field.G*(1E12+m)/r)**.5 * (2 * math.pi) #this shouldn't need a factor
+            yv =  x/r * (Field.G*(1E12+m)/r)**.5 * (2 * math.pi)
             self.bodArr[i] = Body(matrix([x,y]),matrix([xv,yv]),m, canvas)
         ## Don't forget to make EVERYTHING a float, or you're going to have a bad time.
 
@@ -69,12 +69,13 @@ class Draw():
         self.width = w
         self.height = h
         self.canvas = tk.Canvas(master, width = self.width, height = self.height, background = 'black')
-        ## Can't for the life of me figure out what a 'unit' is. Something a bit less than a pixel.
-        ## This at least puts the origin in the middle somewhere.
-        self.canvas.xview_scroll(1000, "units")
-        self.canvas.yview_scroll(1000, "units")
+        ##This sets what a 'unit' is in pixels, though you could use 2i for 2 inches or 5mm for 5 millimetres
+        ##the default was something retarded like 1/10th of a mm I dunno
+        self.canvas.configure(xscrollincrement='1', yscrollincrement='1')
+        self.canvas.xview_scroll(int(-w/2), "units")
+        self.canvas.yview_scroll(int(-h/2), "units")
         self.canvas.pack()
-        self.field = Field(20, self.canvas)
+        self.field = Field(40, self.canvas)
     def drawFrame(self):
         self.field.update()
         for body in self.field.bodArr:
