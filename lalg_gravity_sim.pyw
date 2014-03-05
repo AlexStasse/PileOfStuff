@@ -138,16 +138,38 @@ class Draw():
                 body.redraw()
         self.canvas.update()
         time.sleep(1/60)
-def mainLoop():
-    root = tk.Tk()
-    d = Draw(root)
-    i = 5000
-    while i > 0:
-        i -= 1
-        d.drawFrame()
 
-cProfile.run('mainLoop()', 'restats')
-p = pstats.Stats('restats')
-p.sort_stats('tottime')
-p.print_stats(15)
+##def mainLoop():
+##    root = tk.Tk()
+##    d = Draw(root)
+##    i = 5000
+##    while i > 0:
+##        i -= 1
+##        d.drawFrame()
 
+##cProfile.run('mainLoop()', 'restats')
+##p = pstats.Stats('restats')
+##p.sort_stats('tottime')
+##p.print_stats(15)
+
+class Application():
+    def __init__(self):
+        self.root = tk.Tk()
+        self.d = Draw(self.root)
+        self.i = 1
+        self.root.bind('<Key>', self.reset)
+        self.root.after(1, self.runSim)
+        self.root.mainloop()
+
+    ## Run the simulation. Used in call-backs from tkinter.
+    def runSim(self):
+        while True:
+            self.d.drawFrame()
+
+    ## Used to reset the simulation (new simulation).
+    def reset(self, event):
+        if 'r' in repr(event.char):
+            self.d.canvas.destroy()
+            self.d = Draw(self.root)
+
+a = Application()
