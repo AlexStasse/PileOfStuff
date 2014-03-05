@@ -2,6 +2,7 @@ import time
 import tkinter as tk
 import math
 import numpy
+import colorsys
 ## Keeping the namespace reasonably tidy for now.
 ## probably wise to do from numpy import * at some point.
 from numpy import matrix
@@ -9,19 +10,22 @@ from random import random
 
 ## Celestial body with numpy matrices position X, velocity V, and mass m.
 class Body:
-    def __init__(self, X, V, m, canvas):
+    def __init__(self, X, V, mRand, m, canvas):
         self.X = matrix(X)
         self.V = matrix(V)
         self.tempForce = matrix([0.,0.])
         self.mass = m
         self.canvas = canvas
         self.r = m**(1/3) / 2000
+        self.color =  colorsys.hls_to_rgb(255 * mRand, 128, 1)
+        #Convert RGB to hex
+        self.hex = '#%02x%02x%02x' % self.color
         ## Let the point take care of its oval, that way we can update positions rather than
         ## Recreate them all. NB: Tk is terrible for this type of thing.
         self.oval = canvas.create_oval(self.X.A1[0] - self.r, self.X.A1[1] - self.r,
                          self.X.A1[0] + self.r, self.X.A1[1] + self.r,
-                        fill = 'white',
-                        outline = 'white')
+                        fill = self.hex,
+                        outline = self.hex)
     def redraw(self):
         self.canvas.coords(self.oval,self.X.A1[0] - self.r, self.X.A1[1] - self.r,
                          self.X.A1[0] + self.r, self.X.A1[1] + self.r)
@@ -30,25 +34,21 @@ class Body:
 class Field:
     G = 6.67E-11
     def __init__(self, numBodies, canvas):
-        self.bodArr = [None] * numBodies
+        self.bodArr = [None] * (numBodies + 1)
         for i in range(len(self.bodArr)):
-            #x = random() - 0.5
-            #y = random() - 0.5
-            r = random()*150
+            r = random() * 150
             a = random() * 2 * math.pi
             x = r * math.cos(a)
             y = r * math.sin(a)
-            m = (random()*10)**11
+            mRand = random()
+            m = (mRand*10)**11
             xv = -y/r * (Field.G*(1E12+m)/r)**.5
             yv =  x/r * (Field.G*(1E12+m)/r)**.5
-            self.bodArr[i] = Body(matrix([x,y]),matrix([xv,yv]),m, canvas)
+            self.bodArr[i] = Body(matrix([x,y]),matrix([xv,yv]), mRand, m, canvas)
         ## Don't forget to make EVERYTHING a float, or you're going to have a bad time.
 
         ## Large central body.
-        self.bodArr[0].X = matrix([0.,0.])
-        self.bodArr[0].V = matrix([0.,0.])
-        self.bodArr[0].mass = float(1E12)
-        self.bodArr[0].r = self.bodArr[0].mass**(1/3) / 2000
+        self.bodArr[-1] = Body(matrix([0.,0.]),matrix([0.,0.]), 10, 1E12, canvas)
 
     ## Integrator, still euler with the loop in the python. Now with added overhead!
     def update(self):
@@ -62,7 +62,7 @@ class Field:
                 if not (body == other):
                     disp = body.X - other.X # Still creates an array?
                     ## GMm/r**2 for each other body
-                    body.tempForce += (-GM * other.mass) / (norm(disp)**2) * (disp)
+                    body.tempForce += (-GM * other.mass) / (norm(disp)**3) * (disp)
         for body in self.bodArr:
             ## dV/dt = F/m
             body.V += body.tempForce / body.mass
@@ -81,7 +81,7 @@ class Draw():
         self.canvas.xview_scroll(int(-w/2), "units")
         self.canvas.yview_scroll(int(-h/2), "units")
         self.canvas.pack()
-        self.field = Field(40, self.canvas)
+        self.field = Field(60, self.canvas)
     def drawFrame(self):
         self.field.update()
         for body in self.field.bodArr:
