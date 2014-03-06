@@ -74,22 +74,37 @@ class Field:
     ## Leaves the OO data structure intact at the end.
     ## Presently does not merge bodies after a collision.
     def update(self):
-        dt = 1
-        G = Field.G
+        [pos,vel] = self.bod2Vectors(self.bodArr)
+        accel = self.calcAccel(pos, self.massArr)
+        self.integrate(pos, vel, accel, 1)
+        # Copy flat arrays back into objects.
+        self.vec2Bodies(pos, vel, self.bodArr)
 
-        ## Cache some values for readability.
-        pos = self.posArr
-        vel = self.velArr
-        mass = self.massArr
-        ## Needs zeroing somewhere so creating new is fine.
-        force = zeros([len(self.bodArr),2]) 
-        bodies = self.bodArr
-        
+    ## Copy coordinates from bodies to vectors.
+    def bod2Vectors(self, bodies):
         # Copy position velocity and mass data to flat arrays in O(n) time.
         for i in range(len(bodies)):
-            pos[i] = bodies[i].X
-            vel[i] = bodies[i].V
-            mass[i] = bodies[i].mass
+            self.posArr[i] = bodies[i].X
+            self.velArr[i] = bodies[i].V
+            self.massArr[i] = bodies[i].mass
+        return [self.posArr,self.velArr]
+
+    ## Copy coordinates from vectors to bodies.
+    def vec2Bodies(self, pos, vel, bodies):
+        for i in range(len(pos)):
+            bodies[i].X = pos[i]
+            bodies[i].V = vel[i]
+
+    ## Euler integration 
+    def integrate(self, pos, vel, accel, dt):
+        # O(n) update to velocity/position.
+        vel += dt * accel
+        pos += dt * vel
+
+    ## Calculate acceleration for field with bodies in [n,2] shape array pos
+    ##  with masses in [n] shape array mass.
+    def calcAccel(self, pos, mass):
+        accel = zeros([len(pos),2])
         ## We calculate the force of each body on all the other bodies and
         ##  accumulate it.
         for i in range(len(pos)):
@@ -107,19 +122,10 @@ class Field:
             ##  has extra factor of r in magnitude of rVec
             distance = maximum(distance, 1)**-1.5
 
-            ## Finally calculate GM/r^3 * rVec. NB: this is actually an acceleration.
-            ## but it makes no sense to multiply it then divide it back out.
-            force += -(displacement.T * distance).T * G * mass[i]
-    
-        # O(n) update to velocity/position.
-        vel += dt * force
-        pos += dt * vel
+            ## Finally calculate GM/r^3 * rVec.
+            accel += -(displacement.T * distance).T * Field.G * mass[i]
+        return accel
         
-        # Copy flat arrays back into objects.
-        for i in range(len(bodies)):
-            bodies[i].X = pos[i]
-            bodies[i].V = vel[i]
-            
     ## Return numpy array containing cartesian coordinates x (out[0]) and y (out[1])
     ##  corresponding to radius r and angle a.
     def polarToCart(self, r, a):
