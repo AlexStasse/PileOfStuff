@@ -2,31 +2,27 @@
 import time
 import tkinter as tk
 import math
-import numpy # Numpy 1.8
 import pstats
 import colorsys
 import cProfile
-
-## Keeping the namespace reasonably tidy for now.
-## probably wise to do from numpy import * at some point.
+import time
 from numpy import *
 from random import random
 
 ## Celestial body with numpy matrices position X, velocity V, and mass m.
 class Body:
-    def __init__(self, X, V, m, canvas):
+    def __init__(self, massFactor, canvas, X = zeros(2), V = zeros(2)):
         self.Exists = True
         self.X = X
         self.V = V
-        self.tempForce = array([0.,0.])
-        self.mass = m
+        self.mass = (massFactor*10)**11
         self.canvas = canvas
         self.updateRadius()
         ## Let the point take care of its oval, that way we can update positions rather than
         ## Recreate them all. NB: Tk is terrible for this type of thing.
         self.oval = canvas.create_oval(X[0] - self.r, X[1] - self.r,
                                        X[0] + self.r, X[1] + self.r,)
-        self.updateColour(m**(1/11)/20)
+        self.updateColour(massFactor)
 
 
     ## sets the radius of each body relative to the cube root of its mass, scaled to be a reasonable size.
@@ -54,73 +50,89 @@ class Field:
     sunMass = 1E12
     def __init__(self, numBodies, canvas, cSize):
         self.bodArr = [None] * numBodies
+        ## Large central body.
+        self.bodArr[-1] = (Body(1.3, canvas))
+        ## Init arrays for vectorised integrator.
+        self.posArr  = zeros([numBodies, 2])
+        self.velArr  = zeros([numBodies, 2])
+        self.massArr = zeros([numBodies, 2])
         ## Instantiate all but the last planet, this will be the sun.
         for i in range(len(self.bodArr) - 1):
             ## Random radius, angle, and mass. NB: Power is to skew mass distribution.
             r = random() * cSize / 4
             a = random() * 2 * math.pi
-            m = (random()*10)**11            
-            X = self.polarToCart(r, a, array([0., 0.]))
-            V = self.circOrbitVel(X,
-                                  Field.sunMass + m,
-                                  array([0., 0.]))
-            self.bodArr[i] = Body(X, V, m, canvas)
-            ## Don't forget to make EVERYTHING a float, or you're going to have a bad time.
+            massFactor = random()
 
-        ## Large central body.
-        self.bodArr[-1] = (Body(array([0., 0.]), array([0., 0.]), Field.sunMass, canvas))
+            ## Set random, position w/ uniform r distrib.
+            X = self.polarToCart(r, a)
+            ## Set V st body has approx energy needed for circular orbit.
+            V = self.circOrbitVel(X, self.bodArr[-1].mass)
+            
+            self.bodArr[i] = Body(massFactor, canvas, X, V)
 
-    ## Integrator using vector functions because I can't figure out a timestep operator.
+
+    ## Integrator using vector functions because I can't figure timestep operator.
     ## Leaves the OO data structure intact at the end.
     ## Presently does not merge bodies after a collision.
     def update(self):
         dt = 1
         G = Field.G
-        norm = numpy.linalg.norm
-        disp = array([0.,0.])
-        ## Wow.          So.
-        ##       Copy.                   Access.
-        ##               Much.
-        ## Very.                Memory.
-        posArr = zeros([len(self.bodArr),2])
-        velArr = zeros([len(self.bodArr),2])
-        massArr = zeros([len(self.bodArr),2])
-        forceArr = zeros([len(self.bodArr),2])
 
+        ## Cache some values for readability.
+        pos = self.posArr
+        vel = self.velArr
+        mass = self.massArr
+        ## Needs zeroing somewhere so creating new is fine.
+        force = zeros([len(self.bodArr),2]) 
+        bodies = self.bodArr
+        
         # Copy position velocity and mass data to flat arrays in O(n) time.
-        for i in range(len(self.bodArr)):
-            posArr[i] = self.bodArr[i].X
-            velArr[i] = self.bodArr[i].V
-            massArr[i] = self.bodArr[i].mass
+        for i in range(len(bodies)):
+            pos[i] = bodies[i].X
+            vel[i] = bodies[i].V
+            mass[i] = bodies[i].mass
+        ## We calculate the force of each body on all the other bodies and
+        ##  accumulate it.
+        for i in range(len(pos)):
+            ## Subtract position vector of body[i] from position of every other.
+            displacement = pos - pos[i]
+            ## Find an array of scalar distances squared.
+            distance = sum(displacement**2, axis=1)
 
-        # O(n) fast O(n) operations on said arrays.
-        for i in range(len(posArr)):    
-            rad = posArr - posArr[i]
-            radPow = numpy.sum(rad**2, axis=1)
+        
             ## Collision detection should use a numpy.where or similar here.
-            radPow = numpy.maximum(radPow, 1.)**-1.5
-            forceArr += -(rad.T * radPow).T * G * massArr[i]
-        # O(n) update to velocity/position.
-        velArr += dt * forceArr
-        posArr += dt * velArr
 
+
+            ## Cap the minimum distance so we don't divide by 0.
+            ## Also raise to %-1.5, because GmM / r^2 * rVec needs
+            ##  has extra factor of r in magnitude of rVec
+            distance = maximum(distance, 1)**-1.5
+
+            ## Finally calculate GM/r^3 * rVec. NB: this is actually an acceleration.
+            ## but it makes no sense to multiply it then divide it back out.
+            force += -(displacement.T * distance).T * G * mass[i]
+    
+        # O(n) update to velocity/position.
+        vel += dt * force
+        pos += dt * vel
+        
         # Copy flat arrays back into objects.
-        for i in range(len(self.bodArr)):
-            self.bodArr[i].X = posArr[i]
-            self.bodArr[i].V = velArr[i]
+        for i in range(len(bodies)):
+            bodies[i].X = pos[i]
+            bodies[i].V = vel[i]
             
-    ## Return numpy array containing cartesian coordinates x (out[0]) and y (out[1]) corresponding to radius r and angle a.
-    ## Supposed to have an optional out parameter so array can be edited in place.
-    def polarToCart(self, r, a, out = array([0., 0.])):
-        out[0] = r * math.cos(a)
-        out[1] = r * math.sin(a)
-        return out
-    ## Return 2d velocity vector corresponding to orbit at position X and combined mass Mass
-    def circOrbitVel(self, X, Mass, out = array([0., 0.])):
-        r = numpy.linalg.norm(X)
-        out[0] = -X[1]/r * (Field.G*Mass/r)**.5
-        out[1] =  X[0]/r * (Field.G*Mass/r)**.5
-        return out
+    ## Return numpy array containing cartesian coordinates x (out[0]) and y (out[1])
+    ##  corresponding to radius r and angle a.
+    def polarToCart(self, r, a):
+        return array([r * math.cos(a), r * math.sin(a)])
+
+    ## Return 2d velocity vector corresponding to orbit at position X and combined
+    ##  mass Mass
+    def circOrbitVel(self, X, Mass):
+        r = linalg.norm(X)
+        mag = (Field.G * Mass / r)**0.5 / r
+        return array([-X[1] * mag,
+                       X[0] * mag])
                     
 
 ## Draw and update function.
@@ -134,7 +146,9 @@ class Draw():
         self.canvas.xview_scroll(int(-w/2), "units")
         self.canvas.yview_scroll(int(-h/2), "units")
         self.canvas.pack(expand=True, fill=tk.BOTH)
-        self.field = Field(200, self.canvas, min(w, h))        
+        canvasRad = min(w,h)*0.4
+        self.field = Field(300, canvasRad, self.canvas)
+        
     def drawFrame(self):
         self.field.update()
         for body in self.field.bodArr:
@@ -144,9 +158,10 @@ class Draw():
         time.sleep(1/60)
 
     def update(self, width, height):
-        print('asd')
         self.width = width
         self.height = height
+        ## Put origin at 0,0 to keep screen coords out of simulation.
+        ## As much as pos.
         self.canvas.xview_scroll(int(-self.width/2), "units")
         self.canvas.yview_scroll(int(-self.height/2), "units")
         self.canvas.pack()
@@ -159,7 +174,6 @@ class Application():
         self.width = self.root.winfo_width()
         self.height = self.root.winfo_height()
         self.root.bind('<Key>', self.reset)
-        ##self.root.bind('<Configure>', self.resize)
         self.root.after(1, self.runSim)
         self.root.mainloop()
         #myFunction() # This is my function. It works.
@@ -173,7 +187,7 @@ class Application():
     def reset(self, event):
         if 'r' in repr(event.char):
             self.d.canvas.destroy()
-            self.d = Draw(self.root)
+            self.d = Draw(self.root, self.root.winfo_width(), self.root.winfo_height())
 
     def resize(self, event):
         self.d.update(event.width, event.height)
