@@ -30,13 +30,18 @@ class Body:
                                        fill = self.hex,
                                        outline = self.hex)
 
+    ## sets the radius of each body relative to the cube root of its mass, scaled to be a reasonable size.
     def updateRadius(self):
         self.r = self.mass**(1/3) / 2000
 
+    ## sets the colour for each point relative to its mass
     def updateColour(self):
-        self.color =  colorsys.hls_to_rgb(255 * self.mass, 128, 1)
+        self.color =  colorsys.hls_to_rgb(self.mass, 0.5, 1)
+        r = self.color[0] * 255
+        g = self.color[1] * 255
+        b = self.color[2] * 255
         #Convert RGB to hex
-        self.hex = '#%02x%02x%02x' % self.color
+        self.hex = '#%02x%02x%02x' % (r,g,b)
         
     ## Redraw circle at coords self.X with radius self.r
     def redraw(self):
