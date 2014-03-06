@@ -52,12 +52,12 @@ class Body:
 class Field:
     G = 6.67E-11
     sunMass = 1E12
-    def __init__(self, numBodies, canvas):
+    def __init__(self, numBodies, canvas, cSize):
         self.bodArr = [None] * numBodies
         ## Instantiate all but the last planet, this will be the sun.
         for i in range(len(self.bodArr) - 1):
             ## Random radius, angle, and mass. NB: Power is to skew mass distribution.
-            r = random() * 150
+            r = random() * cSize / 4
             a = random() * 2 * math.pi
             m = (random()*10)**11            
             X = self.polarToCart(r, a, array([0., 0.]))
@@ -134,7 +134,7 @@ class Draw():
         self.canvas.xview_scroll(int(-w/2), "units")
         self.canvas.yview_scroll(int(-h/2), "units")
         self.canvas.pack(expand=True, fill=tk.BOTH)
-        self.field = Field(200, self.canvas)
+        self.field = Field(200, self.canvas, min(w, h))
         
     def drawFrame(self):
         self.field.update()
