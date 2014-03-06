@@ -113,7 +113,7 @@ class Field:
         pos += vel * dt + (dt**2 / 2) * accel
         [accel2, colArr] = self.calcAccel(pos, self.massArr)
         vel += 1/2 * (accel + accel2) * dt
-        return accel2
+        return [accel2, colArr]
     def velVerlet(self, pos, vel, accel, dt):
         pos += vel * dt + (dt**2 / 2) * accel
         vel += accel * dt
