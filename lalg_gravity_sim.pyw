@@ -75,8 +75,9 @@ class Field:
     ## Presently does not merge bodies after a collision.
     def update(self):
         [pos,vel] = self.bod2Vectors(self.bodArr)
+        ## Calculate accelerations for integrator.
         accel = self.calcAccel(pos, self.massArr)
-        self.integrate(pos, vel, accel, 1)
+        self.velVerletIntegrate(pos, vel, accel, 1)
         # Copy flat arrays back into objects.
         self.vec2Bodies(pos, vel, self.bodArr)
 
@@ -96,10 +97,14 @@ class Field:
             bodies[i].V = vel[i]
 
     ## Euler integration 
-    def integrate(self, pos, vel, accel, dt):
+    def eulerIntegrate(self, pos, vel, accel, dt):
         # O(n) update to velocity/position.
         vel += dt * accel
         pos += dt * vel
+    def velVerletIntegrate(self, pos, vel, accel, dt):
+        pos += vel * dt + (dt**2 / 2) * accel
+        accel2 = self.calcAccel(pos, self.massArr)
+        vel += 1/2 * (accel + accel2) * dt
 
     ## Calculate acceleration for field with bodies in [n,2] shape array pos
     ##  with masses in [n] shape array mass.
@@ -120,7 +125,7 @@ class Field:
             ## Cap the minimum distance so we don't divide by 0.
             ## Also raise to %-1.5, because GmM / r^2 * rVec needs
             ##  has extra factor of r in magnitude of rVec
-            distance = maximum(distance, 1)**-1.5
+            distance = maximum(distance, 1E-10)**-1.5
 
             ## Finally calculate GM/r^3 * rVec.
             accel += -(displacement.T * distance).T * Field.G * mass[i]
