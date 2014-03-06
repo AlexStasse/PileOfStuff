@@ -14,6 +14,7 @@ class Body:
         self.Exists = True
         self.X = X
         self.V = V
+        self.collisions = [None]
         self.mass = (massFactor*10)**11
         self.canvas = canvas
         self.updateRadius()
@@ -54,6 +55,8 @@ class Field:
         self.posArr  = zeros([numBodies, 2])
         self.velArr  = zeros([numBodies, 2])
         self.massArr = zeros([numBodies, 2])
+        self.rArr = zeros(numBodies) # ARRRRRR!
+        self.accel = zeros([numBodies, 2])
         ## Instantiate all but the last planet, this will be the sun.
         for i in range(len(self.bodArr) - 1):
             ## Random radius, angle, and mass. NB: Power is to skew mass distribution.
@@ -75,8 +78,13 @@ class Field:
     def update(self):
         [pos,vel] = self.bod2Vectors(self.bodArr)
         ## Calculate accelerations for integrator.
-        accel = self.calcAccel(pos, self.massArr)
-        self.velVerlet(pos, vel, accel, 1)
+        [accel, colArr] = self.calcAccel(pos, self.massArr)
+        [accel2, colArr2] = self.leapfrog(pos, vel, accel, 1)
+
+        ## colArr and colArr2 should contain arrays of collisions in format
+        ## [i1, i2, i3...] where i2 and latter are the indeces of bodies that were
+        ## in the same place as i1
+        
         # Copy flat arrays back into objects.
         self.vec2Bodies(pos, vel, self.bodArr)
 
@@ -87,6 +95,7 @@ class Field:
             self.posArr[i] = bodies[i].X
             self.velArr[i] = bodies[i].V
             self.massArr[i] = bodies[i].mass
+            self.rArr[i] = bodies[i].r
         return [self.posArr,self.velArr]
 
     ## Copy coordinates from vectors to bodies.
@@ -100,18 +109,21 @@ class Field:
         # O(n) update to velocity/position.
         vel += dt * accel
         pos += dt * vel
-    def leapFrog(self, pos, vel, accel, dt):
+    def leapfrog(self, pos, vel, accel, dt):
         pos += vel * dt + (dt**2 / 2) * accel
-        accel2 = self.calcAccel(pos, self.massArr)
+        [accel2, colArr] = self.calcAccel(pos, self.massArr)
         vel += 1/2 * (accel + accel2) * dt
+        return accel2
     def velVerlet(self, pos, vel, accel, dt):
         pos += vel * dt + (dt**2 / 2) * accel
         vel += accel * dt
 
     ## Calculate acceleration for field with bodies in [n,2] shape array pos
     ##  with masses in [n] shape array mass.
+    ## Still somehow 1/1000 as fast as a CPU with no bottleneck--probably memory.
     def calcAccel(self, pos, mass):
-        accel = zeros([len(pos),2])
+        self.accel *=0
+        colArr = []
         ## We calculate the force of each body on all the other bodies and
         ##  accumulate it.
         for i in range(len(pos)):
@@ -122,7 +134,9 @@ class Field:
 
         
             ## Collision detection should use a numpy.where or similar here.
-
+            collisions = (where(distance - self.rArr - self.rArr[i] < 0))
+            if( len(collisions[0]) > 1):
+                colArr.append(collisions) # A bit slow, but simple.
 
             ## Cap the minimum distance so we don't divide by 0.
             ## Also raise to %-1.5, because GmM / r^2 * rVec needs
@@ -130,8 +144,8 @@ class Field:
             distance = maximum(distance, 1E-10)**-1.5
 
             ## Finally calculate GM/r^3 * rVec.
-            accel += -(displacement.T * distance).T * Field.G * mass[i]
-        return accel
+            self.accel += -(displacement.T * distance).T * Field.G * mass[i]
+        return [self.accel, colArr]
         
     ## Return numpy array containing cartesian coordinates x (out[0]) and y (out[1])
     ##  corresponding to radius r and angle a.
@@ -159,7 +173,7 @@ class Draw():
         self.canvas.yview_scroll(int(-h/2), "units")
         self.canvas.pack(expand=True, fill=tk.BOTH)
         canvasRad = min(w,h)*0.4
-        self.field = Field(200, canvasRad, self.canvas)
+        self.field = Field(1000, canvasRad, self.canvas)
         
     def drawFrame(self):
         t0 = time.time()
@@ -212,5 +226,5 @@ class Application():
             
 cProfile.run('a = Application()', 'restats')
 p = pstats.Stats('restats')
-p.sort_stats('tottime')
+p.sort_stats('cumtime')
 p.print_stats(15)
