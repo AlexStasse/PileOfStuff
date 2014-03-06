@@ -78,7 +78,7 @@ class Field:
         [pos,vel] = self.bod2Vectors(self.bodArr)
         ## Calculate accelerations for integrator.
         accel = self.calcAccel(pos, self.massArr)
-        self.velVerletIntegrate(pos, vel, accel, 1)
+        self.velVerlet(pos, vel, accel, 1)
         # Copy flat arrays back into objects.
         self.vec2Bodies(pos, vel, self.bodArr)
 
@@ -98,14 +98,17 @@ class Field:
             bodies[i].V = vel[i]
 
     ## Euler integration 
-    def eulerIntegrate(self, pos, vel, accel, dt):
+    def euler(self, pos, vel, accel, dt):
         # O(n) update to velocity/position.
         vel += dt * accel
         pos += dt * vel
-    def velVerletIntegrate(self, pos, vel, accel, dt):
+    def leapFrog(self, pos, vel, accel, dt):
         pos += vel * dt + (dt**2 / 2) * accel
         accel2 = self.calcAccel(pos, self.massArr)
         vel += 1/2 * (accel + accel2) * dt
+    def velVerlet(self, pos, vel, accel, dt):
+        pos += vel * dt + (dt**2 / 2) * accel
+        vel += accel * dt
 
     ## Calculate acceleration for field with bodies in [n,2] shape array pos
     ##  with masses in [n] shape array mass.
