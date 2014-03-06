@@ -5,7 +5,6 @@ import math
 import pstats
 import colorsys
 import cProfile
-import time
 from numpy import *
 from random import random
 
@@ -161,15 +160,16 @@ class Draw():
         self.canvas.yview_scroll(int(-h/2), "units")
         self.canvas.pack(expand=True, fill=tk.BOTH)
         canvasRad = min(w,h)*0.4
-        self.field = Field(300, canvasRad, self.canvas)
+        self.field = Field(200, canvasRad, self.canvas)
         
     def drawFrame(self):
+        t0 = time.time()
         self.field.update()
         for body in self.field.bodArr:
             if body.Exists == True:
                 body.redraw()
         self.canvas.update()
-        time.sleep(1/60)
+        time.sleep(max(1/60 - time.time() + t0, 0))
 
     def update(self, width, height):
         self.width = width
@@ -191,11 +191,16 @@ class Application():
         self.root.after(1, self.runSim)
         self.root.mainloop()
         #myFunction() # This is my function. It works.
-
+    def doFrames(self, n):
+        t0 = time.time()
+        for i in range(n):
+            self.d.drawFrame()
+        print('Framerate: ', round(n / (time.time() - t0),2))
+            
     ## Run the simulation. Used in call-backs from tkinter.
     def runSim(self):
         while True:
-            self.d.drawFrame()
+            self.doFrames(10)
 
     ## Used to reset the simulation (new simulation).
     def reset(self, event):
@@ -205,5 +210,8 @@ class Application():
 
     def resize(self, event):
         self.d.update(event.width, event.height)
-
-a = Application()
+            
+cProfile.run('a = Application()', 'restats')
+p = pstats.Stats('restats')
+p.sort_stats('tottime')
+p.print_stats(15)
