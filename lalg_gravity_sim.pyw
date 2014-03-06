@@ -22,26 +22,26 @@ class Body:
         self.mass = m
         self.canvas = canvas
         self.updateRadius()
-        self.updateColour()
         ## Let the point take care of its oval, that way we can update positions rather than
         ## Recreate them all. NB: Tk is terrible for this type of thing.
         self.oval = canvas.create_oval(X[0] - self.r, X[1] - self.r,
-                                       X[0] + self.r, X[1] + self.r,
-                                       fill = self.hex,
-                                       outline = self.hex)
+                                       X[0] + self.r, X[1] + self.r,)
+        self.updateColour(m**(1/11)/20)
+
 
     ## sets the radius of each body relative to the cube root of its mass, scaled to be a reasonable size.
     def updateRadius(self):
         self.r = self.mass**(1/3) / 2000
 
     ## sets the colour for each point relative to its mass
-    def updateColour(self):
-        self.color =  colorsys.hls_to_rgb(self.mass, 0.5, 1)
+    def updateColour(self, m):
+        self.color =  colorsys.hls_to_rgb(m, 0.5, 1)
         r = self.color[0] * 255
         g = self.color[1] * 255
         b = self.color[2] * 255
         #Convert RGB to hex
         self.hex = '#%02x%02x%02x' % (r,g,b)
+        self.canvas.itemconfig(self.oval, fill = self.hex, outline = self.hex)
         
     ## Redraw circle at coords self.X with radius self.r
     def redraw(self):
@@ -59,8 +59,7 @@ class Field:
             ## Random radius, angle, and mass. NB: Power is to skew mass distribution.
             r = random() * 150
             a = random() * 2 * math.pi
-            m = (random()*10)**11
-            
+            m = (random()*10)**11            
             X = self.polarToCart(r, a, array([0., 0.]))
             V = self.circOrbitVel(X,
                                   Field.sunMass + m,
@@ -96,7 +95,7 @@ class Field:
                             other.Exists = False
                             other.canvas.delete(other.oval)
                             body.updateRadius()
-                            body.updateColour()
+                            body.updateColour(cMass**(1/11)/20)
                         else:
                             ## Multiply GMm/r**2 by disp vector / r then add in place to tempForce.
                             numpy.add(body.tempForce,
@@ -135,7 +134,7 @@ class Draw():
         self.canvas.xview_scroll(int(-w/2), "units")
         self.canvas.yview_scroll(int(-h/2), "units")
         self.canvas.pack(expand=True, fill=tk.BOTH)
-        self.field = Field(60, self.canvas)
+        self.field = Field(200, self.canvas)
         
     def drawFrame(self):
         self.field.update()
