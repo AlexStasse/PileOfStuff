@@ -164,7 +164,7 @@ class Field:
 
 ## Draw and update function.
 class Draw():
-    def __init__(self, master,w = 600,h = 600):
+    def __init__(self, master, numPoints, w = 600,h = 600):
         self.width = w
         self.height = h
         self.canvas = tk.Canvas(master, width = self.width, height = self.height, background = 'black')
@@ -174,16 +174,16 @@ class Draw():
         self.canvas.yview_scroll(int(-h/2), "units")
         self.canvas.pack(expand=True, fill=tk.BOTH)
         canvasRad = min(w,h)*0.4
-        self.field = Field(1000, canvasRad, self.canvas)
+        self.field = Field(numPoints, canvasRad, self.canvas)
         
-    def drawFrame(self):
+    def drawFrame(self, fps):
         t0 = time.time()
         self.field.update()
         for body in self.field.bodArr:
             if body.Exists == True:
                 body.redraw()
         self.canvas.update()
-        time.sleep(max(1/60 - time.time() + t0, 0))
+        time.sleep(max(1/fps - time.time() + t0, 0))
 
     def update(self, width, height):
         self.width = width
@@ -195,10 +195,11 @@ class Draw():
         self.canvas.pack()
 
 class Application():
-    def __init__(self):
+    def __init__(self, numPoints):
         self.root = tk.Tk()
-        self.d = Draw(self.root)
-        self.i = 1
+        self.numPoints = numPoints
+        self.fps = 60
+        self.d = Draw(self.root, self.numPoints)
         self.width = self.root.winfo_width()
         self.height = self.root.winfo_height()
         self.root.bind('<Key>', self.reset)
@@ -208,7 +209,7 @@ class Application():
     def doFrames(self, n):
         t0 = time.time()
         for i in range(n):
-            self.d.drawFrame()
+            self.d.drawFrame(self.fps)
         print('Framerate: ', round(n / (time.time() - t0),2))
             
     ## Run the simulation. Used in call-backs from tkinter.
@@ -220,12 +221,12 @@ class Application():
     def reset(self, event):
         if 'r' in repr(event.char):
             self.d.canvas.destroy()
-            self.d = Draw(self.root, self.root.winfo_width(), self.root.winfo_height())
+            self.d = Draw(self.root, self.numPoints, self.root.winfo_width(), self.root.winfo_height())
 
     def resize(self, event):
         self.d.update(event.width, event.height)
             
-cProfile.run('a = Application()', 'restats')
+cProfile.run('a = Application(1000)', 'restats')
 p = pstats.Stats('restats')
 p.sort_stats('cumtime')
 p.print_stats(15)
