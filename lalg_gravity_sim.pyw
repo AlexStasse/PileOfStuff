@@ -15,7 +15,7 @@ class Body:
         self.X = X
         self.V = V
         self.collisions = [None]
-        self.mass = (massFactor*10)**11
+        self.mass = (massFactor*10)**11 * Field.G
         self.canvas = canvas
         self.updateRadius()
         ## Let the point take care of its oval, that way we can update positions rather than
@@ -27,7 +27,7 @@ class Body:
 
     ## sets the radius of each body relative to the cube root of its mass, scaled to be a reasonable size.
     def updateRadius(self):
-        self.r = self.mass**(1/3) / 2000
+        self.r = (self.mass / Field.G)**(1/3) / 2000
 
     ## sets the colour for each point relative to its mass
     def updateColour(self, m):
@@ -47,9 +47,11 @@ class Body:
 ## Field of celestial bodies, main integration and such should happen here.
 class Field:
     G = 6.67E-11
-    def __init__(self, numBodies, fieldSize, canvas):
+    def __init__(self, numBodies, fieldSize, stepsPerFrame, canvas):
         self.bodArr = [None] * numBodies
         ## Large central body.
+        self.dt = 1
+        self.stepsPerFrame = stepsPerFrame
         self.bodArr[-1] = (Body(1.3, canvas))
         ## Init arrays for vectorised integrator.
         self.posArr  = zeros([numBodies, 2])
@@ -67,7 +69,7 @@ class Field:
             ## Set random, position w/ uniform r distrib.
             X = self.polarToCart(r, a)
             ## Set V st body has approx energy needed for circular orbit.
-            V = self.circOrbitVel(X, self.bodArr[-1].mass)
+            V = self.circOrbitVel(X, self.bodArr[-1].mass / Field.G)
             
             self.bodArr[i] = Body(massFactor, canvas, X, V)
 
@@ -78,13 +80,15 @@ class Field:
     def update(self):
         [pos,vel] = self.bod2Vectors(self.bodArr)
         ## Calculate accelerations for integrator.
-        [accel, colArr] = self.calcAccel(pos, self.massArr)
-        [accel2, colArr2] = self.leapfrog(pos, vel, accel, 1)
+        for i in range(self.stepsPerFrame):
+            [colArr, colArr2] = self.leapfrog(pos, vel,
+                                              self.dt / self.stepsPerFrame)
+            #self.velVerlet(pos,vel,accel,0.02)
 
-        ## colArr and colArr2 should contain arrays of collisions in format
-        ## [i1, i2, i3...] where i2 and latter are the indeces of bodies that were
-        ## in the same place as i1
-        
+            ## colArr and colArr2 should contain arrays of collisions in format
+            ## [i1, i2, i3...] where i2 and latter are the indeces of bodies that were
+            ## in the same place as i1
+            
         # Copy flat arrays back into objects.
         self.vec2Bodies(pos, vel, self.bodArr)
 
@@ -109,11 +113,12 @@ class Field:
         # O(n) update to velocity/position.
         vel += dt * accel
         pos += dt * vel
-    def leapfrog(self, pos, vel, accel, dt):
+    def leapfrog(self, pos, vel, dt):
+        [accel, colArr] = self.calcAccel(pos, self.massArr)
         pos += vel * dt + (dt**2 / 2) * accel
-        [accel2, colArr] = self.calcAccel(pos, self.massArr)
+        [accel2, colArr2] = self.calcAccel(pos, self.massArr)
         vel += 1/2 * (accel + accel2) * dt
-        return [accel2, colArr]
+        return [colArr, colArr2]
     def velVerlet(self, pos, vel, accel, dt):
         pos += vel * dt + (dt**2 / 2) * accel
         vel += accel * dt
@@ -144,7 +149,7 @@ class Field:
             distance = maximum(distance, 1E-10)**-1.5
 
             ## Finally calculate GM/r^3 * rVec.
-            self.accel += -(displacement.T * distance).T * Field.G * mass[i]
+            self.accel += -(displacement.T * distance).T * mass[i]
         return [self.accel, colArr]
         
     ## Return numpy array containing cartesian coordinates x (out[0]) and y (out[1])
@@ -167,13 +172,13 @@ class Draw():
         self.width = w
         self.height = h
         self.canvas = tk.Canvas(master, width = self.width, height = self.height, background = 'black')
-        ##This sets what a 'unit' is in pixels.
+        ## This sets what a 'unit' is in pixels.
         self.canvas.configure(xscrollincrement='1', yscrollincrement='1')
         self.canvas.xview_scroll(int(-w/2), "units")
         self.canvas.yview_scroll(int(-h/2), "units")
         self.canvas.pack(expand=True, fill=tk.BOTH)
         canvasRad = min(w,h)*0.4
-        self.field = Field(numPoints, canvasRad, self.canvas)
+        self.field = Field(numPoints, canvasRad, 10, self.canvas)
         
     def drawFrame(self, fps):
         t0 = time.time()
