@@ -178,7 +178,7 @@ class Draw():
         self.canvas.yview_scroll(int(-h/2), "units")
         self.canvas.pack(expand=True, fill=tk.BOTH)
         canvasRad = min(w,h)*0.4
-        self.field = Field(numPoints, canvasRad, 10, self.canvas)
+        self.field = Field(numPoints, canvasRad, 1, self.canvas)
         
     def drawFrame(self, fps):
         t0 = time.time()
@@ -230,7 +230,7 @@ class Application():
     def resize(self, event):
         self.d.update(event.width, event.height)
             
-cProfile.run('a = Application(1000)', 'restats')
+cProfile.run('a = Application(100)', 'restats')
 p = pstats.Stats('restats')
 p.sort_stats('cumtime')
 p.print_stats(15)
