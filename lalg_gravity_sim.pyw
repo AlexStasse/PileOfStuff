@@ -9,7 +9,7 @@ import cProfile
 
 ## Keeping the namespace reasonably tidy for now.
 ## probably wise to do from numpy import * at some point.
-from numpy import array
+from numpy import *
 from random import random
 
 ## Celestial body with numpy matrices position X, velocity V, and mass m.
@@ -70,43 +70,44 @@ class Field:
         ## Large central body.
         self.bodArr[-1] = (Body(array([0., 0.]), array([0., 0.]), Field.sunMass, canvas))
 
-    ## Integrator, still euler with the loop in the python. Now with added overhead!
+    ## Integrator using vector functions because I can't figure out a timestep operator.
+    ## Leaves the OO data structure intact at the end.
+    ## Presently does not merge bodies after a collision.
     def update(self):
-
+        dt = 1
         G = Field.G
         norm = numpy.linalg.norm
         disp = array([0.,0.])
-        for body in self.bodArr:
-            if body.Exists == True:
-                body.tempForce = array([0.,0.])
-                GM = G * body.mass              #Hoist G*M1 calculation.
-                for other in self.bodArr:
-                    if other.Exists == False:
-                        pass
-                    elif not (body == other):
-                        ## Find displacement without creating new array.
-                        numpy.subtract(body.X, other.X, disp)
-                        dist = norm(disp)
-                        if dist <= body.r:
-                            cMass = body.mass + other.mass
-                            body.X = ((body.X * body.mass) + (other.X * other.mass)) / cMass
-                            body.V = ((body.V * body.mass) + (other.V * other.mass)) / cMass
-                            body.mass = cMass
-                            other.Exists = False
-                            other.canvas.delete(other.oval)
-                            body.updateRadius()
-                            body.updateColour(cMass**(1/11)/20)
-                        else:
-                            ## Multiply GMm/r**2 by disp vector / r then add in place to tempForce.
-                            numpy.add(body.tempForce,
-                                      numpy.multiply((-GM * other.mass) / (max(norm(disp),0.1)**3), (disp),disp),
-                                      body.tempForce)
-        for body in self.bodArr:
-            if body.Exists == True:
-                ## dV/dt = F/m
-                body.V += body.tempForce / body.mass
-                ## dX/dt = V
-                body.X += body.V
+        ## Wow.          So.
+        ##       Copy.                   Access.
+        ##               Much.
+        ## Very.                Memory.
+        posArr = zeros([len(self.bodArr),2])
+        velArr = zeros([len(self.bodArr),2])
+        massArr = zeros([len(self.bodArr),2])
+        forceArr = zeros([len(self.bodArr),2])
+
+        # Copy position velocity and mass data to flat arrays in O(n) time.
+        for i in range(len(self.bodArr)):
+            posArr[i] = self.bodArr[i].X
+            velArr[i] = self.bodArr[i].V
+            massArr[i] = self.bodArr[i].mass
+
+        # O(n) fast O(n) operations on said arrays.
+        for i in range(len(posArr)):    
+            rad = posArr - posArr[i]
+            radPow = numpy.sum(rad**2, axis=1)
+            ## Collision detection should use a numpy.where or similar here.
+            radPow = numpy.maximum(radPow, 1.)**-1.5
+            forceArr += -(rad.T * radPow).T * G * massArr[i]
+        # O(n) update to velocity/position.
+        velArr += dt * forceArr
+        posArr += dt * velArr
+
+        # Copy flat arrays back into objects.
+        for i in range(len(self.bodArr)):
+            self.bodArr[i].X = posArr[i]
+            self.bodArr[i].V = velArr[i]
             
     ## Return numpy array containing cartesian coordinates x (out[0]) and y (out[1]) corresponding to radius r and angle a.
     ## Supposed to have an optional out parameter so array can be edited in place.
@@ -128,14 +129,12 @@ class Draw():
         self.width = w
         self.height = h
         self.canvas = tk.Canvas(master, width = self.width, height = self.height, background = 'black')
-        ##This sets what a 'unit' is in pixels, though you could use 2i for 2 inches or 5mm for 5 millimetres
-        ##the default was something retarded like 1/10th of a mm I dunno
+        ##This sets what a 'unit' is in pixels.
         self.canvas.configure(xscrollincrement='1', yscrollincrement='1')
         self.canvas.xview_scroll(int(-w/2), "units")
         self.canvas.yview_scroll(int(-h/2), "units")
         self.canvas.pack(expand=True, fill=tk.BOTH)
-        self.field = Field(200, self.canvas, min(w, h))
-        
+        self.field = Field(200, self.canvas, min(w, h))        
     def drawFrame(self):
         self.field.update()
         for body in self.field.bodArr:
@@ -152,19 +151,6 @@ class Draw():
         self.canvas.yview_scroll(int(-self.height/2), "units")
         self.canvas.pack()
 
-##def mainLoop():
-##    root = tk.Tk()
-##    d = Draw(root)
-##    i = 5000
-##    while i > 0:
-##        i -= 1
-##        d.drawFrame()
-
-##cProfile.run('mainLoop()', 'restats')
-##p = pstats.Stats('restats')
-##p.sort_stats('tottime')
-##p.print_stats(15)
-
 class Application():
     def __init__(self):
         self.root = tk.Tk()
@@ -176,6 +162,7 @@ class Application():
         ##self.root.bind('<Configure>', self.resize)
         self.root.after(1, self.runSim)
         self.root.mainloop()
+        #myFunction() # This is my function. It works.
 
     ## Run the simulation. Used in call-backs from tkinter.
     def runSim(self):
