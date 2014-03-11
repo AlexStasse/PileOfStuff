@@ -47,7 +47,7 @@ class Body:
 ## Field of celestial bodies, main integration and such should happen here.
 class Field:
     G = 6.67E-11
-    def __init__(self, numBodies, fieldSize, stepsPerFrame, canvas):
+    def __init__(self, numBodies, cSize, stepsPerFrame, canvas):
         self.bodArr = [None] * numBodies
         ## Large central body.
         self.dt = 1
@@ -62,7 +62,7 @@ class Field:
         ## Instantiate all but the last planet, this will be the sun.
         for i in range(len(self.bodArr) - 1):
             ## Random radius, angle, and mass. NB: Power is to skew mass distribution.
-            r = random() * cSize / 4
+            r = random() * cSize
             a = random() * 2 * math.pi
             massFactor = random()
 
