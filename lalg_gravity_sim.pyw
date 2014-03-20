@@ -17,7 +17,7 @@ class Body:
         self.collisions = [None]
         self.mass = (massFactor*10)**11 * Field.G
         self.canvas = canvas
-        self.updateRadius()
+        self.updateRadius(self.mass)
         ## Let the point take care of its oval, that way we can update positions rather than
         ## Recreate them all. NB: Tk is terrible for this type of thing.
         self.oval = canvas.create_oval(X[0] - self.r, X[1] - self.r,
@@ -26,8 +26,8 @@ class Body:
 
 
     ## sets the radius of each body relative to the cube root of its mass, scaled to be a reasonable size.
-    def updateRadius(self):
-        self.r = (self.mass / Field.G)**(1/3) / 2000
+    def updateRadius(self, mass):
+        self.r = (mass / Field.G)**(1/3) / 2000
 
     ## sets the colour for each point relative to its mass
     def updateColour(self, m):
@@ -62,7 +62,7 @@ class Field:
         ## Instantiate all but the last planet, this will be the sun.
         for i in range(len(self.bodArr) - 1):
             ## Random radius, angle, and mass. NB: Power is to skew mass distribution.
-            r = random() * cSize
+            r = (random()+.1)/1.1 * cSize #changed so that planets do not spawn on top of sun.
             a = random() * 2 * math.pi
             massFactor = random()
 
@@ -83,6 +83,8 @@ class Field:
         for i in range(self.stepsPerFrame):
             [colArr, colArr2] = self.leapfrog(pos, vel,
                                               self.dt / self.stepsPerFrame)
+            if len(colArr) > 0:
+                self.merge(colArr)
             #self.velVerlet(pos,vel,accel,0.02)
 
             ## colArr and colArr2 should contain arrays of collisions in format
@@ -91,6 +93,22 @@ class Field:
             
         # Copy flat arrays back into objects.
         self.vec2Bodies(pos, vel, self.bodArr)
+
+        
+    ## Yeah.. this doesn't work yet. It's meant to merge colliding bodies but I haven't figured out how to delete (or ignore) old ones.
+    def merge(self, colArr):
+        b = colArr[0]
+        b1 = b[0]
+        pri = b1[0]
+        for j in range(1, len(b1)):
+            print(j ,"of", len(b1)-1)
+            sec = b1[j]
+            self.bodArr[pri].V = self.bodArr[pri].V * self.bodArr[pri].mass + self.bodArr[sec].V * self.bodArr[sec].mass
+            self.bodArr[pri].mass = self.bodArr[pri].mass + self.bodArr[sec].mass
+            self.bodArr[pri].V = self.bodArr[pri].V / self.bodArr[pri].mass
+            self.bodArr[pri].updateColour(((self.bodArr[pri].mass/Field.G)**(1/11))/10)
+    #        self.bodArr[sec].Exists = False
+        self.bodArr[pri].updateRadius(self.bodArr[pri].mass)
 
     ## Copy coordinates from bodies to vectors.
     def bod2Vectors(self, bodies):
@@ -104,9 +122,13 @@ class Field:
 
     ## Copy coordinates from vectors to bodies.
     def vec2Bodies(self, pos, vel, bodies):
-        for i in range(len(pos)):
-            bodies[i].X = pos[i]
-            bodies[i].V = vel[i]
+        for i in range(len(pos), 0):
+            if bodies[i].Exists == True:
+                bodies[i].X = pos[i]
+                bodies[i].V = vel[i]
+##            else:
+##                del bodies[i]
+##                print(len(bodies))
 
     ## Euler integration 
     def euler(self, pos, vel, accel, dt):
@@ -214,7 +236,7 @@ class Application():
         t0 = time.time()
         for i in range(n):
             self.d.drawFrame(self.fps)
-        print('Framerate: ', round(n / (time.time() - t0),2))
+        ##print('Framerate: ', round(n / (time.time() - t0),2))
             
     ## Run the simulation. Used in call-backs from tkinter.
     def runSim(self):
@@ -231,6 +253,6 @@ class Application():
         self.d.update(event.width, event.height)
             
 cProfile.run('a = Application(100)', 'restats')
-p = pstats.Stats('restats')
-p.sort_stats('cumtime')
-p.print_stats(15)
+##p = pstats.Stats('restats')
+##p.sort_stats('cumtime')
+##p.print_stats(15)
