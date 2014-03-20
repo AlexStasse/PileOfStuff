@@ -107,7 +107,7 @@ class Field:
             self.bodArr[pri].mass = self.bodArr[pri].mass + self.bodArr[sec].mass
             self.bodArr[pri].V = self.bodArr[pri].V / self.bodArr[pri].mass
             self.bodArr[pri].updateColour(((self.bodArr[pri].mass/Field.G)**(1/11))/10)
-    #        self.bodArr[sec].Exists = False
+            self.bodArr[sec].Exists = False
         self.bodArr[pri].updateRadius(self.bodArr[pri].mass)
 
     ## Copy coordinates from bodies to vectors.
