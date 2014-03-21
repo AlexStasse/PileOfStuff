@@ -83,8 +83,8 @@ class Field:
         for i in range(self.stepsPerFrame):
             [colArr, colArr2] = self.leapfrog(pos, vel,
                                               self.dt / self.stepsPerFrame)
-            if len(colArr) > 0:
-                self.merge(colArr)
+            #if len(colArr) > 0:
+            #    self.merge(colArr)
             #self.velVerlet(pos,vel,accel,0.02)
 
             ## colArr and colArr2 should contain arrays of collisions in format
@@ -126,9 +126,9 @@ class Field:
             if bodies[i].Exists == True:
                 bodies[i].X = pos[i]
                 bodies[i].V = vel[i]
-##            else:
-##                del bodies[i]
-##                print(len(bodies))
+            else:
+                del bodies[i]
+                print(len(bodies))
 
     ## Euler integration 
     def euler(self, pos, vel, accel, dt):
